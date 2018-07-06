@@ -11,48 +11,40 @@
 
 import numpy as np
 
-from sorting_algos import bubble_sort, selection_sort
+from sorting_algos import bubble_sort, selection_sort, insertion_sort,\
+                          merge_sort, quick_sort
 
-N = 10
+def should_be(x):
+    """Test a condition."""
+    global tests, fails
+    tests += 1
+    if not x:
+        fails += 1
+
+# Define test cases
 A = [8, 4, 3, 2, 1, 7, 6, 0, 5, 9]
 sorted_A = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
-sort_funs = [bubble_sort, selection_sort]
+sort_funs = [bubble_sort, selection_sort, insertion_sort,\
+             merge_sort, quick_sort]
 
-#------------------------------------------------------------------------------ 
+#------------------------------------------------------------------------------
 #        Run general sorting algorithm tests
 #------------------------------------------------------------------------------
 tests = 0
 fails = 0
 for sort in sort_funs:
-    # Test empty list
-    tests += 1
-    if sort([]) != []:
-        fails += 1
-
-    # Test single element list
-    tests += 1
-    if sort([0]) != [0]:
-        fails += 1
-
-    # Test on sorted list
-    tests += 1
-    if sort(sorted_A) != sorted_A:
-        fails += 1
-
-    # Test on reverse sorted list
-    tests += 1
-    if sort(A[::-1]) != sorted_A:
-        fails += 1
-
-    # Test on randomized A
-    tests += 1
-    if sort(A) != sorted_A:
-        fails += 1
+    should_be(sort([]) == [])                   # empty list
+    should_be(sort([0]) == [0])                 # single element list
+    should_be(sort([1, 1, 1]) == [1, 1, 1])     # all equal
+    # Pass a copy so we don't sort the original
+    should_be(sort(list(sorted_A)) == sorted_A) # sorted list
+    should_be(sort(list(A[::-1])) == sorted_A)  # reverse sorted list
+    should_be(sort(list(A)) == sorted_A)        # randomized A
 
 if fails > 0:
     print("{}/{} tests failed!".format(fails, tests))
-else: 
+else:
     print("All {} test passed!".format(tests))
 
 #==============================================================================
