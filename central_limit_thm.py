@@ -17,15 +17,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from cycler import cycler
 from scipy import stats
-from scipy.stats import uniform, norm, gaussian_kde, ttest_1samp, kstest
+from scipy.stats import uniform, norm, gaussian_kde, kstest, shapiro, anderson
 
-plt.ion()
 np.random.seed(56) # ensure reproducibility
 # plt.close('all')
 
 # Globals
-samples = int(1e4)
+samples = int(1e3)
 res = 1e-4
 
 def convolve_dist(dist, n, samples=1000, norm_out=True):
@@ -66,22 +66,22 @@ N = norm(loc=0, scale=1)
 # Define test distribution
 a = 1
 b = 9 # s.t. pdf = 1/8 = 0.125
-U = uniform(loc=a, scale=b-a)     # ~ U[loc, loc+scale]
+dist = uniform(loc=a, scale=b-a)     # ~ dist[loc, loc+scale]
 
 #------------------------------------------------------------------------------ 
 #        Plot the pdf of the test distribution
 #------------------------------------------------------------------------------
 # Draw samples on the range where pdf has support
-x = np.linspace(U.ppf(res), U.ppf(1-res), 100)
+x = np.linspace(dist.ppf(res), dist.ppf(1-res), 100)
 
 fig = plt.figure(1)
 fig.clf()
 ax = plt.gca()
 ax.set_title('Uniform Distribution')
-ax.plot(x, U.pdf(x), 'r-', lw=5, alpha=0.6, label='uniform pdf')
+ax.plot(x, dist.pdf(x), 'r-', lw=5, alpha=0.6, label='uniform pdf')
 
 # Draw from the distribution and display the histogram
-r = U.rvs(size=int(1e3))
+r = dist.rvs(size=int(1e3))
 ax.hist(r, density=True, histtype='stepfilled', alpha=0.2, label='samples')
 ax.legend(loc='lower right')
 
@@ -90,19 +90,61 @@ ax.legend(loc='lower right')
 #------------------------------------------------------------------------------
 # Draw from distrubution until we approach a standard normal
 MAX_N = 100
-thresh = 1
+thresh = 1 - 1e-3
 score = np.inf
 n = 1
+D = np.empty(MAX_N)
+W = np.empty(MAX_N)
+A = np.empty(MAX_N)
+p = np.empty(MAX_N)
+D.fill(np.nan)
+A.fill(np.nan)
+W.fill(np.nan)
+p.fill(np.nan)
 while n < MAX_N:
     # Compute convolution
-    Zn = convolve_dist(U, n=n, samples=samples)
+    Zn = convolve_dist(dist, n=n, samples=samples)
     # Test if convolution is equivalent to normal distribution
-    kstest
-    score = 0
-    if score < thresh:
+    D[n], p[n] = kstest(Zn, 'norm')
+    W[n], _ = shapiro(Zn) # Shapiro tests for normality only
+    A[n], cv, sig = anderson(Zn, dist='norm')
+    if W[n] > thresh:
         break
     # Increase n
     n += 1
+
+if n == MAX_N:
+    print("Warning! MAX_N = {} reached!".format(MAX_N))
+
+print("Results:\n\tn = {} for D = {}. p = {}".format(n, D[n-1], p[n-1]))
+
+# Plot test statistics
+plt.figure(9)
+plt.clf()
+ax = plt.gca()
+ax.plot(np.arange(MAX_N), D, c='C3', label='$D$ statistic')
+ax.plot(np.arange(MAX_N), W, c='C2', label='$W$ statistic')
+ax.plot(np.arange(MAX_N), p, c='C0', label='$p$-value')
+ax.set_title('Test Statistics vs. $n$')
+ax.set_xlabel('Number of convolved distributions')
+ax.set_ylabel('Statistic')
+ax.legend(loc='center left')
+
+# Plot A^2 statistic (Anderson test)
+plt.figure(10)
+plt.clf()
+ax = plt.gca()
+ax.plot(np.arange(MAX_N), A, c='C1', label='$A^2$ statistic')
+# Use greys for threshold values
+ax.set_prop_cycle(cycler('color',
+                         [plt.cm.bone(i) for i in np.linspace(0, 0.75, 5)]))
+for i in range(5):
+    ax.plot(np.array([0, MAX_N]), cv[i]*np.array([1, 1]),
+            label='Threshold {}%'.format(sig[i]))
+ax.set_title('Test Statistics vs. $n$')
+ax.set_xlabel('Number of convolved distributions')
+ax.set_ylabel('Statistic')
+ax.legend(loc='top right')
 
 #------------------------------------------------------------------------------ 
 #        Plots vs. n
@@ -116,7 +158,7 @@ xN = np.linspace(N.ppf(res), N.ppf(1-res), samples)
 n_arr = [1, 2, 10, 30]
 for i in range(len(n_arr)):
     # Convolve the pdfs
-    Zn = convolve_dist(U, n=n_arr[i], samples=samples)
+    Zn = convolve_dist(dist, n=n_arr[i], samples=samples)
     Nn = gaussian_kde(Zn)   # compare to actual normal
 
     # Plot vs standard normal distribution
