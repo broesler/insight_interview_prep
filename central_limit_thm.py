@@ -21,7 +21,7 @@ from cycler import cycler
 from scipy import stats
 from scipy.stats import uniform, norm, gaussian_kde, kstest, shapiro, anderson
 
-np.random.seed(56) # ensure reproducibility
+np.random.seed(565656) # ensure reproducibility
 # plt.close('all')
 
 # Globals
@@ -68,6 +68,8 @@ a = 1
 b = 9 # s.t. pdf = 1/8 = 0.125
 dist = uniform(loc=a, scale=b-a)     # ~ dist[loc, loc+scale]
 
+# TODO run same script with different distributions (skewed, etc.)
+
 #------------------------------------------------------------------------------ 
 #        Plot the pdf of the test distribution
 #------------------------------------------------------------------------------
@@ -101,16 +103,16 @@ D.fill(np.nan)
 A.fill(np.nan)
 W.fill(np.nan)
 p.fill(np.nan)
+Zn = []
 while n < MAX_N:
     # Compute convolution
-    Zn = convolve_dist(dist, n=n, samples=samples)
+    Zn.append(convolve_dist(dist, n=n, samples=samples))
     # Test if convolution is equivalent to normal distribution
-    D[n], p[n] = kstest(Zn, 'norm')
-    W[n], _ = shapiro(Zn) # Shapiro tests for normality only
-    A[n], cv, sig = anderson(Zn, dist='norm')
+    D[n], p[n] = kstest(Zn[-1], 'norm')
+    W[n], _ = shapiro(Zn[-1])
+    A[n], cv, sig = anderson(Zn[-1], dist='norm')
     if W[n] > thresh:
         break
-    # Increase n
     n += 1
 
 if n == MAX_N:
@@ -118,7 +120,7 @@ if n == MAX_N:
 
 print("Results:\n\tn = {} for D = {}. p = {}".format(n, D[n-1], p[n-1]))
 
-# Plot test statistics
+# Plot D and W test statistics
 plt.figure(9)
 plt.clf()
 ax = plt.gca()
@@ -139,12 +141,25 @@ ax.plot(np.arange(MAX_N), A, c='C1', label='$A^2$ statistic')
 ax.set_prop_cycle(cycler('color',
                          [plt.cm.bone(i) for i in np.linspace(0, 0.75, 5)]))
 for i in range(5):
-    ax.plot(np.array([0, MAX_N]), cv[i]*np.array([1, 1]),
+    ax.plot(np.array([0, n]), cv[i]*np.array([1, 1]),
             label='Threshold {}%'.format(sig[i]))
 ax.set_title('Test Statistics vs. $n$')
 ax.set_xlabel('Number of convolved distributions')
 ax.set_ylabel('Statistic')
-ax.legend(loc='top right')
+ax.legend(loc='upper right')
+
+# Q-Q plot
+plt.figure(11)
+plt.clf()
+ax = plt.gca()
+colors = [plt.cm.bone(i) for i in np.linspace(0, 0.75, len(Zn))][::-1]
+for i in range(len(Zn)):
+    result = stats.probplot(Zn[i], plot=ax)
+    ax.get_lines()[2*i].set_markeredgecolor('none')
+    ax.get_lines()[2*i].set_markerfacecolor(colors[i])
+    # Turn off all but last fit line
+    if i < len(Zn)-1:
+        ax.get_lines()[2*i+1].set_linestyle('none')
 
 #------------------------------------------------------------------------------ 
 #        Plots vs. n
@@ -153,7 +168,7 @@ ax.legend(loc='top right')
 fig = plt.figure(2, figsize=(11,9))
 fig.clf()
 
-xN = np.linspace(N.ppf(res), N.ppf(1-res), samples)
+xN = np.linspace(N.ppf(res), N.ppf(1-res), 1000)
 
 n_arr = [1, 2, 10, 30]
 for i in range(len(n_arr)):
@@ -169,9 +184,10 @@ for i in range(len(n_arr)):
     # ax.set_ylim([0, 1.25*max(Nn.pdf(xN))])
     ax.set_title("n = {}".format(n_arr[i]))
 
-fig.suptitle('Central Limit Theorem Demonstration')
+fig.suptitle(("Central Limit Theorem, $N_{{samples}}$ = {}\n" + \
+             "$S_n = X_1 + \dots + X_n$").format(samples))
 ax.legend(loc='lower right')
 
-# plt.show(block=False)
+plt.show()
 #==============================================================================
 #==============================================================================
