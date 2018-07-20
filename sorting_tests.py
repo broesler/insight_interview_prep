@@ -12,7 +12,7 @@
 import numpy as np
 
 from sorting_algos import bubble_sort, selection_sort, insertion_sort,\
-                          merge_sort, quick_sort
+                          merge_sort, quick_sort, heap_sort
 
 def should_be(x):
     """Test a condition."""
@@ -25,8 +25,9 @@ def should_be(x):
 A = [8, 4, 3, 2, 1, 7, 6, 0, 5, 9]
 sorted_A = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
-sort_funs = [bubble_sort, selection_sort, insertion_sort,\
-             merge_sort, quick_sort]
+# sort_funs = [bubble_sort, selection_sort, insertion_sort,\
+#              merge_sort, quick_sort]
+sort_funs = [heap_sort]
 
 #------------------------------------------------------------------------------
 #        Run general sorting algorithm tests
