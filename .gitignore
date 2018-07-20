@@ -1,2 +1,4 @@
 .ipynb_checkpoints
 data/
+ml-100k/*.base
+ml-100k/*.test
